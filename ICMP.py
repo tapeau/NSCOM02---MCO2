@@ -40,12 +40,40 @@ def checksum(string):
     answer = answer >> 8 | (answer << 8 & 0xff00)
     return answer
 
+def evaluateICMPError(type, code):
+    if type == 3:
+        if code == 0: return "ERROR: Network unreachable."
+        elif code == 1: return "ERROR: Host unreachable."
+        elif code == 2: return "ERROR: Protocol unreachable."
+        elif code == 3: return "ERROR: Port unreachable."
+        elif code == 4: return "ERROR: Fragmentation needed and DF (Don't Fragment) bit set."
+        elif code == 5: return "ERROR: Source route failed."
+        elif code == 6: return "ERROR: Destination network unknown."
+        elif code == 7: return "ERROR: Destination host unknown."
+        elif code == 8: return "ERROR: Source host isolated."
+        elif code == 9: return "ERROR: Network administratively prohibited."
+        elif code == 10: return "ERROR: Host administratively prohibited."
+        elif code == 11: return "ERROR: Network unreachable for TOS."
+        elif code == 12: return "ERROR: Host unreachable for TOS."
+        elif code == 13: return "ERROR: Communication administratively prohibited by filtering."
+        elif code == 14: return "ERROR: Host precedence violation."
+        elif code == 15: return "ERROR: Precedence cutoff in effect."
+    elif type == 4:
+        return "ERROR: Source quench."
+    elif type == 5:
+        return "ERROR: Redirect message - a more efficient route is available."
+    elif type == 11:
+        return "ERROR: Time exceeded."
+    elif type == 12:
+        return "ERROR: Parameter problem."
+    else:
+        return "ERROR: ICMP error."
+
 def receiveOnePing(mySocket, ID, timeout, destAddr):
     timeLeft = timeout
     while 1:
         startedSelect = time.time()
         whatReady = select.select([mySocket], [], [], timeLeft)
-        howLongInSelect = (time.time() - startedSelect)
         if whatReady[0] == []: # Timeout
             return None
         
@@ -56,18 +84,18 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         #Fetch the ICMP header from the IP packet
         header = recPacket[20:28]
         type, code, checksum, packetID, sequence = struct.unpack("!bbHHh", header)
-        if type == 0 and packetID == ID: # type should be 0
-            byte_in_double = struct.calcsize("d")
-            timeSent = struct.unpack("d", recPacket[28:28+byte_in_double])[0]
-            delay = timeReceived - startedSelect
+        
+        # Check type and code
+        if type == 0 and code == 0 and packetID == ID:
+            byteDouble = struct.calcsize("d")
             ttl = struct.unpack("!b", recPacket[8:9])[0]
-            return (delay, ttl, byte_in_double)
+            delay = timeReceived - startedSelect
+            return (delay, ttl, byteDouble)
+        else:
+            print(evaluateICMPError(type, code))
+            return None
         
         #Fill in end
-        
-        timeLeft = timeLeft - howLongInSelect
-        if timeLeft <= 0:
-            return "Request timed out."
 
 def sendOnePing(mySocket, ID, sequence, destAddr):
     # Header is type (8), code (8), checksum (16), id (16), sequence (16)
@@ -133,8 +161,12 @@ def ping(host, amount, timeout=1):
         dest = host
         print("\nPinging " + dest + " with " + str(8*amount) + " bytes of data using Python:")
     except ValueError:
-        dest = gethostbyname(host)
-        print("\nPinging " + host + " [" + dest + "] with " + str(8*amount) + " bytes of data using Python:")
+        try:
+            dest = gethostbyname(host)
+            print("\nPinging " + host + " [" + dest + "] with " + str(8*amount) + " bytes of data using Python:")
+        except gaierror:
+            print("ERROR: Cannot resolve hostname \'" + host + "\'.")
+            return
     
     # Send ping requests to a server separated by approximately one second
     for i in range(amount):
@@ -151,9 +183,10 @@ def ping(host, amount, timeout=1):
             bytes = result[2]
             # Print results similar to that of Windows ping
             print("Reply from " + dest + ": bytes=" + str(bytes) + " time=" + str(delay) + "ms TTL=" + str(abs(ttl)))
-        time.sleep(1)# one second
+        time.sleep(1) # one second
     
     # Print ping statistics
+    if minTime == sys.maxsize: minTime = 0
     print("")
     print("Ping statistics for " + dest + ":")
     print("\tPackets: Sent = " + str(amount) + ", Received = " + str(amount-loss) + ", Lost = " + str(loss) + " (" + str(int((loss/amount)*100)) + "% loss),")
@@ -169,7 +202,7 @@ if __name__ == "__main__":
             print("ERROR: Too many arguments passed.\n\t(Usage: python ICMP.py <server> <amount>)")
         else:
             # Check if 2nd argument is a digit
-            if sys.argv[2].isdigit() is False:
+            if sys.argv[2].isdigit() == False:
                 print("ERROR: 2nd argument must be a positive integer.")
             else:
                 # Call the ping function
