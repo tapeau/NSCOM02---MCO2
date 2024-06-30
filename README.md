@@ -4,16 +4,19 @@ A simple command-line client-side ping implementation developed in Python as Maj
 ## Running the program
 Build and run the client with the necessary parameters.
 
-- Parameter 1 (int): The amount of echo requests the program will send to the server
-- Parameter 2 (string): The name or address of the server
+- Parameter 1 (string): The name or address of the server. Must be a string.
+- Parameter 2 (int): The amount of echo requests the program will send to the server. Must be a positive integer.
 ```
-python ICMP.py <amount> <server>
+python ICMP.py <server> <amount>
 ```
 
 ### Examples:
 ```
-python ICMP.py 4 localhost
+python ICMP.py localhost 4
 ```
 ```
-python ICMP.py 11 example.com
+python ICMP.py example.com 11
 ```
+
+## Additional credits
+All additional credits and references can be found at the top of the source file.

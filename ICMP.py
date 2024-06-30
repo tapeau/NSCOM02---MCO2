@@ -1,3 +1,14 @@
+'''
+Ping implementation in fulfillment of Major Course Output #2 for NSCOM02 Term 3 - AY 2023-2024
+
+GitHub Repository:
+https://github.com/tapeau/NSCOM02.python-ping
+
+Additional Credits / References:
+- https://www.tutorialspoint.com/python/python_command_line_arguments.htm
+- https://docs.python.org/3/library/ipaddress.html
+'''
+# Import libraries
 from socket import *
 from statistics import mean
 import os
@@ -5,6 +16,7 @@ import sys
 import struct
 import time
 import select
+import ipaddress
 
 ICMP_ECHO_REQUEST = 8
 
@@ -104,29 +116,35 @@ def doOnePing(destAddr, sequence, timeout):
     
     return delay
 
-def ping(host, timeout=1):
+def ping(host, amount, timeout=1):
     # timeout=1 means: If one second goes by without a reply from the server,
     # the client assumes that either the client's ping or the server's pong is lost
     
-    dest = gethostbyname(host)
-    print("")
-    print("Pinging " + dest + " with 32 bytes of data using Python:")
-    
     # Initialize additional variables
+    dest = 0
     loss = 0
-    recTime = [0, 0, 0, 0]
+    listTime = [0] * amount
     minTime = sys.maxsize
     maxTime = 0
     
+    # Check if passed host is an IP address or a name
+    try:
+        dest = ipaddress.ip_address(host)
+        dest = host
+        print("\nPinging " + dest + " with " + str(8*amount) + " bytes of data using Python:")
+    except ValueError:
+        dest = gethostbyname(host)
+        print("\nPinging " + host + " [" + dest + "] with " + str(8*amount) + " bytes of data using Python:")
+    
     # Send ping requests to a server separated by approximately one second
-    for i in range(4):
+    for i in range(amount):
         result = doOnePing(dest, i, timeout)
         if not result:
             print("Request timed out.")
             loss += 1
         else:
             delay = int(result[0]*1000)
-            recTime[i] = delay
+            listTime[i] = delay
             if delay < minTime: minTime = delay
             if delay > maxTime: maxTime = delay
             ttl = result[1]
@@ -138,8 +156,24 @@ def ping(host, timeout=1):
     # Print ping statistics
     print("")
     print("Ping statistics for " + dest + ":")
-    print("\tPackets: Sent = " + str(4) + ", Received = " + str(4-loss) + ", Lost = " + str(loss) + " (" + str(int((loss/4)*100)) + "% loss),")
+    print("\tPackets: Sent = " + str(amount) + ", Received = " + str(amount-loss) + ", Lost = " + str(loss) + " (" + str(int((loss/amount)*100)) + "% loss),")
     print("Approximate round trip times in milli-seconds:")
-    print("\tMinimum = " + str(minTime) + "ms, Maximum = " + str(maxTime) + "ms, Average = " + str(int(round(mean(recTime)))) + "ms")
+    print("\tMinimum = " + str(minTime) + "ms, Maximum = " + str(maxTime) + "ms, Average = " + str(int(round(mean(listTime)))) + "ms")
 
-ping("example.com")
+if __name__ == "__main__":
+    try:
+        # Check for passed arguments
+        if len(sys.argv) < 3:
+            print("ERROR: Incomplete arguments passed.\n\t(Usage: python ICMP.py <server> <amount>)")
+        elif len(sys.argv) > 3:
+            print("ERROR: Too many arguments passed.\n\t(Usage: python ICMP.py <server> <amount>)")
+        else:
+            # Check if 2nd argument is a digit
+            if sys.argv[2].isdigit() is False:
+                print("ERROR: 2nd argument must be a positive integer.")
+            else:
+                # Call the ping function
+                ping(sys.argv[1], int(sys.argv[2]))
+    except KeyboardInterrupt:
+        print("Exiting program...")
+        sys.exit(1)
