@@ -93,7 +93,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
             return (delay, ttl, byteDouble)
         else:
             print(evaluateICMPError(type, code))
-            return None
+            return (-1.0, -1, -1)
         
         #Fill in end
 
@@ -174,6 +174,8 @@ def ping(host, amount, timeout=1):
         if not result:
             print("Request timed out.")
             loss += 1
+        elif result == (-1.0, -1, -1):
+            pass
         else:
             delay = int(result[0]*1000)
             listTime[i] = delay
