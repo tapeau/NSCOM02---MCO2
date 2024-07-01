@@ -1,6 +1,10 @@
 '''
 Ping implementation in fulfillment of Major Course Output #2 for NSCOM02 Term 3 - AY 2023-2024
 
+Members:
+TAPIA, John Lorenzo (S11)
+CHAN, Harvey Ivan (S12)
+
 GitHub Repository:
 https://github.com/tapeau/NSCOM02.python-ping
 
